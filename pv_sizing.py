@@ -112,31 +112,22 @@ for x2 in range(0,len(pv_total)):
 for x3 in range(0,len(batt_total)):
     batt_total[x3]=-(load_total[x3]+pv_total[x3])
 
-print('Hourly load (W)')
-for inc1 in range(0,len(load_total)//6):
-    print(
-    '{0:8}  {1:8}  {2:8}  {3:8}  {4:8}  {5:8}'
-    .format(load_total[6*inc1],load_total[6*inc1+1],load_total[6*inc1+2],load_total[6*inc1+3],load_total[6*inc1+4],load_total[6*inc1+5])
-    )
+print('Load (W)')
+for inc1 in range(0,len(load_total)):
+    print(load_total[inc1])
 print('Daily load (kWh): {0:.4f}'.format(kwh_load))
-
 print('')
-print('Battery profile (W)')
-for inc2 in range(0,len(batt_total)//6):
-    print(
-    '{0:8}  {1:8}  {2:8}  {3:8}  {4:8}  {5:8}'
-    .format(batt_total[6*inc2],batt_total[6*inc2+1],batt_total[6*inc2+2],batt_total[6*inc2+3],batt_total[6*inc2+4],batt_total[6*inc2+5])
-    )
+
+print('Batt (W)')
+for inc2 in range(0,len(batt_total)):
+    print(batt_total[inc2])
 print('Number of batteries: {0:.0f}'.format(n_bat))
 print('Energy from batteries (kWh): {0:.4f}'.format(kwh_bb))
-
 print('')
-print('Hourly PV gains (W)')
-for inc3 in range(0,len(pv_total)//6):
-    print(
-    '{0:8}  {1:8}  {2:8}  {3:8}  {4:8}  {5:8}'
-    .format(pv_total[6*inc3],pv_total[6*inc3+1],pv_total[6*inc3+2],pv_total[6*inc3+3],pv_total[6*inc3+4],pv_total[6*inc3+5])
-    )
+
+print('PV (W)')
+for inc3 in range(0,len(pv_total)):
+    print(pv_total[inc3])
 print('Number of PV modules: {0:.0f}'.format(n_mod))
 print('Energy from PV (kWh): {0:.4f}'.format(length*width*integral*n_mod/1000))
 
