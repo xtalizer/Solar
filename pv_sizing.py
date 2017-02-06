@@ -4,6 +4,7 @@ import math
 import load_profile
 import irradiance
 import solar_angle
+import solar_eff
 
 def spfloor(x):
     if (math.floor(x)==0):
@@ -25,15 +26,15 @@ kwhmo_load=150
 #STC Specifications
 volt_stc=68.2
 amps_stc=6.39
-eff_stc=1
-pow_stc=1
-irradiance_stc=300 #watts
+eff_stc=0.154
+pow_stc=230.5
+irradiance_stc=1000.0 #watts
 temp_stc=298.15
 
 #Partial Derivatives
-volt_change=1 #partial derivative of voltage with temperature
-amps_change=1 #partial derivative of current with temperature
-pow_change=1
+volt_change=-0.0035*volt_stc #partial derivative of voltage with temperature
+amps_change=0.00056*amps_stc #partial derivative of current with temperature
+pow_change=-0.0045*pow_stc
 
 #Misc
 ff=0.23
@@ -44,7 +45,7 @@ sf_mod=1
 volt_mod_mpp=31.2
 
 #Design constraints
-azimuth_mod=0
+azimuth_mod=190
 altitude_mod=10
 height=5
 
@@ -63,32 +64,32 @@ volt_bb=96 #battery bank voltage
 ## Date and Location ##
 date=[1,29,17]
 utc=8
-latitude=121.066269
-longitude=14.654284
+latitude=14.654284
+longitude=121.066269
 
 ## Calculations ##
 
-#Load Profile Calculations
+#load Profile Calculations
 kwh_load=kwhmo_load/30.0
 load=load_profile.actual_load(kwhmo_load,rel_load)
 
-#Battery Calculations
+#battery Calculations
 kwh_bb=days_auto*kwh_load*sf_batt/dod
 kwh_batt=volt_nom*amphour_full/1000
 n_bat=math.ceil(kwh_bb/kwh_batt)
 n_batser=volt_bb/volt_nom
 n_batpar=math.ceil(n_bat/n_batser) #number of batteries
 
-#Determine power generation at each time of the day
+#determine power generation at each time of the day
 pv=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 for p in range(0,len(pv)):
     angle_solar=solar_angle.sol_angle(date,[p,0],utc,longitude,latitude)
     ir_dir=irradiance.irrad(angle_solar[0],angle_solar[1],azimuth_mod,altitude_mod,height)
-    #eff_solar=solar_eff.solareff(volt_stc,amps_stc,eff_stc,pow_stc,irradiance_stc,temp_stc,ff,volt_change,amps_change,pow_change,length,width,irradiance,temp_mod)
-    eff_solar=0.154
+    eff_solar=solar_eff.solareff(volt_stc,amps_stc,eff_stc,pow_stc,irradiance_stc,temp_stc,ff,volt_change,amps_change,pow_change,length,width,ir_dir,temp_mod)
+    #eff_solar=0.154
     pv[p]=ir_dir*eff_solar #unit: W
 
-#Determine total power generation (Simpsons rule)
+#determine total power generation (Simpsons rule)
 integral=0
 pv.append(pv[0])
 for q in range(1,(1+len(pv))//2):
@@ -96,12 +97,12 @@ for q in range(1,(1+len(pv))//2):
 del pv[len(pv)-1] #remove added item
 integral=integral*(24.0/len(pv))/3.0 #intensity in W/m^2
 
-#Determine number of modules used
+#determine number of modules used
 n_mod=math.ceil((kwh_load*sf_mod*1000)/(length*width*integral))
 n_modser=spfloor(volt_bb/volt_mod_mpp)
 n_modpar=math.ceil(n_mod/n_modser)
 
-#Determine profiles
+#determine profiles
 pv_total=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 load_total=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 batt_total=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
@@ -112,31 +113,35 @@ for x2 in range(0,len(pv_total)):
 for x3 in range(0,len(batt_total)):
     batt_total[x3]=-(load_total[x3]+pv_total[x3])
 
-print('Hourly load (W)')
-for inc1 in range(0,len(load_total)//6):
-    print(
-    '{0:8}  {1:8}  {2:8}  {3:8}  {4:8}  {5:8}'
-    .format(load_total[6*inc1],load_total[6*inc1+1],load_total[6*inc1+2],load_total[6*inc1+3],load_total[6*inc1+4],load_total[6*inc1+5])
-    )
-print('Daily load (kWh): {0:.4f}'.format(kwh_load))
+#generate text file
+writer=open('pv_data.txt','w')
+writer.write('(Copy to spreadsheet)\n')
+writer.write('\n')
+writer.write('Load (W)\n')
+for inc1 in range(0,len(load_total)):
+    writer.write(str(load_total[inc1])+'\n')
+writer.write('\n')
+writer.write('Battery (W)\n')
+for inc2 in range(0,len(batt_total)):
+    writer.write(str(batt_total[inc2])+'\n')  
+writer.write('\n')
+writer.write('PV (W)\n')
+for inc3 in range(0,len(pv_total)):
+    writer.write(str(pv_total[inc3])+'\n')
 
+#output in console
+print('+----------+----------+----------+----------+')
+print('| {0:8} | {1:8} | {2:8} | {3:8} |'.format('Hour','Load (W)','Batt (W)','PV (W)'))
+print('+----------+----------+----------+----------+')
+for inc4 in range(0,24):
+    print('| {0:8} | {1:8} | {2:8} | {3:8} |'.format(inc4,load_total[inc4],batt_total[inc4],pv_total[inc4]))
+print('+----------+----------+----------+----------+')
 print('')
-print('Battery profile (W)')
-for inc2 in range(0,len(batt_total)//6):
-    print(
-    '{0:8}  {1:8}  {2:8}  {3:8}  {4:8}  {5:8}'
-    .format(batt_total[6*inc2],batt_total[6*inc2+1],batt_total[6*inc2+2],batt_total[6*inc2+3],batt_total[6*inc2+4],batt_total[6*inc2+5])
-    )
+print('Daily load (kWh): {0:.4f}'.format(kwh_load))
+print('')
 print('Number of batteries: {0:.0f}'.format(n_bat))
 print('Energy from batteries (kWh): {0:.4f}'.format(kwh_bb))
-
 print('')
-print('Hourly PV gains (W)')
-for inc3 in range(0,len(pv_total)//6):
-    print(
-    '{0:8}  {1:8}  {2:8}  {3:8}  {4:8}  {5:8}'
-    .format(pv_total[6*inc3],pv_total[6*inc3+1],pv_total[6*inc3+2],pv_total[6*inc3+3],pv_total[6*inc3+4],pv_total[6*inc3+5])
-    )
 print('Number of PV modules: {0:.0f}'.format(n_mod))
 print('Energy from PV (kWh): {0:.4f}'.format(length*width*integral*n_mod/1000))
 
